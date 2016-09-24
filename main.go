@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 
@@ -46,6 +47,19 @@ func authenticate(e *external.External) (*backblaze.B2, error) {
 		AccountID:      accountID,
 		ApplicationKey: appKey,
 	})
+
+	logname := os.Getenv("B2_LOG_FILE")
+	if logname != "" {
+		logfile, err := os.OpenFile(logname, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		log.SetOutput(logfile)
+		b2.Debug = true
+		e.Debug(fmt.Sprintf("using logfile %v\n", logname))
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't authorize: %v", err)
 	}
