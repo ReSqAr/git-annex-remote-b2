@@ -61,6 +61,8 @@ func authenticate(e *external.External) (*backblaze.B2, error) {
 		e.Debug(fmt.Sprintf("using logfile %v\n", logname))
 	}
 
+	b2.Retries = 5
+
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't authorize: %v", err)
 	}
