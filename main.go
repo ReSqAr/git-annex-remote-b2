@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/encryptio/go-git-annex-external/external"
 	"gopkg.in/kothar/go-backblaze.v0"
@@ -192,12 +193,24 @@ func (be *B2Ext) Store(e *external.External, key, file string) error {
 		return fmt.Errorf("couldn't hash local file %v: %v", file, shaError)
 	}
 
-	_, err = be.bucket.UploadHashedFile(
-		be.prefix+key,
-		nil,
-		external.NewProgressReader(fh, e),
-		hex.EncodeToString(haveSHA),
-		contentLength)
+	for i := uint(0); i < 5; i++ {
+		_, err = be.bucket.UploadHashedFile(
+			be.prefix+key,
+			nil,
+			external.NewProgressReader(fh, e),
+			hex.EncodeToString(haveSHA),
+			contentLength)
+
+		if err == nil {
+			break
+		} else {
+			fh.Seek(0, 0)
+			var wait time.Duration = time.Duration(1<<i) * time.Second
+			e.Debug(fmt.Sprintf("upload failed, retrying in %v, error: %v", wait, err))
+			time.Sleep(wait)
+		}
+	}
+
 	if err != nil {
 		return fmt.Errorf("couldn't upload file: %v", err)
 	}
